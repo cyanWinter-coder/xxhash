@@ -33,7 +33,8 @@ type Digest struct {
 	v4    uint64
 	total uint64
 	mem   [32]byte
-	n     int // how much of mem is used
+	n     int    // how much of mem is used
+	seed  uint64 // seed the state was last reset with
 }
 
 // New creates a new Digest with a zero seed.
@@ -63,6 +64,7 @@ func (d *Digest) ResetWithSeed(seed uint64) {
 	d.v4 = seed - prime1
 	d.total = 0
 	d.n = 0
+	d.seed = seed
 }
 
 // Size always returns 8 bytes.
@@ -202,6 +204,9 @@ func (d *Digest) UnmarshalBinary(b []byte) error {
 	b, d.total = consumeUint64(b)
 	copy(d.mem[:], b)
 	d.n = int(d.total % uint64(len(d.mem)))
+	// The legacy marshaled format does not record the seed; clear it so a
+	// reused Digest does not carry a stale seed into future checkpoints.
+	d.seed = 0
 	return nil
 }
 
